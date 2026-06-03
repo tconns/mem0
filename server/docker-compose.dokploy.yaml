@@ -66,9 +66,11 @@ services:
   mem0-dashboard:
     build:
       context: ./dashboard
-      dockerfile: Dockerfile
+      # Cần server/dashboard/Dockerfile.dokploy (copy từ deploy/mem0-dokploy/server-dashboard-Dockerfile.dokploy)
+      dockerfile: Dockerfile.dokploy
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_INSTANCE_NAME: ${NEXT_PUBLIC_INSTANCE_NAME:-Mem0}
     restart: unless-stopped
     networks:
       - mem0_network
