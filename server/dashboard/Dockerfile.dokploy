@@ -1,6 +1,6 @@
-# Copy file này vào repo mem0: server/dashboard/Dockerfile.dokploy
-# Fix Dokploy: (1) node:22-alpine thay node:20 — node:sqlite / pnpm 11
-#              (2) npm_config_dangerously_allow_all_builds — ERR_PNPM_IGNORED_BUILDS (sharp)
+# Copy vào repo mem0: server/dashboard/Dockerfile.dokploy
+# (+ dashboard-pnpm-workspace.yaml → server/dashboard/pnpm-workspace.dokploy.yaml)
+# Fix: node:22-alpine; pnpm 11 allowBuilds (sharp) — không dùng npm_config_* / .npmrc
 
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat
@@ -8,12 +8,13 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-# pnpm 11: build scripts (sharp, …) bị chặn → ERR_PNPM_IGNORED_BUILDS
-ENV npm_config_dangerously_allow_all_builds=true
+# pnpm 11.5: chỉ đọc allowBuilds từ pnpm-workspace.yaml hoặc pnpm_config_* / CLI flag
+COPY pnpm-workspace.dokploy.yaml ./pnpm-workspace.yaml
+ENV PNPM_CONFIG_DANGEROUSLY_ALLOW_ALL_BUILDS=true
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile --network-timeout 600000; \
   elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile --dangerously-allow-all-builds; \
   else npm install; \
   fi
 
