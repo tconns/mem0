@@ -136,6 +136,9 @@ DEFAULT_CONFIG = {
     "history_db_path": HISTORY_DB_PATH,
 }
 
+from dokploy_env import apply_dokploy_env_overrides
+
+DEFAULT_CONFIG = apply_dokploy_env_overrides(DEFAULT_CONFIG)
 
 set_session_factory(SessionLocal)
 initialize_state(DEFAULT_CONFIG)
