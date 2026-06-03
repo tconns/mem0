@@ -42,7 +42,10 @@ services:
       - ./history:/app/history
     networks:
       - mem0_network
-    # Không có ports: — Dokploy/Traefik route theo domain
+      - dokploy-network
+    labels:
+      - traefik.docker.network=dokploy-network
+    # Không có ports: — Dokploy/Traefik route theo domain (cần dokploy-network)
 
   postgres:
     image: ankane/pgvector:v0.5.1
@@ -72,8 +75,6 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_INSTANCE_NAME: ${NEXT_PUBLIC_INSTANCE_NAME:-Mem0}
     restart: unless-stopped
-    networks:
-      - mem0_network
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       API_INTERNAL_URL: http://mem0:8000
@@ -81,11 +82,22 @@ services:
     depends_on:
       mem0:
         condition: service_started
+    networks:
+      - mem0_network
+      - dokploy-network
+    labels:
+      - traefik.docker.network=dokploy-network
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      # runner Alpine không có wget — dùng node có sẵn trong image
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:3000/api/health',(r)=>{let d='';r.on('data',(c)=>d+=c);r.on('end',()=>process.exit(r.statusCode===200?0:1));}).on('error',()=>process.exit(1))\"",
+        ]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 40s
     # Container listen :3000 — KHÔNG map host :3000 (Dokploy UI đã chiếm host :3000)
 
 volumes:
@@ -94,3 +106,5 @@ volumes:
 networks:
   mem0_network:
     driver: bridge
+  dokploy-network:
+    external: true
