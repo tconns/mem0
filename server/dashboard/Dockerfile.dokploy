@@ -1,6 +1,6 @@
 # Copy file này vào repo mem0: server/dashboard/Dockerfile.dokploy
-# Sửa lỗi build trên Dokploy: pnpm 11 + node:20 → ERR_UNKNOWN_BUILTIN_MODULE node:sqlite
-# Gốc Mem0 dùng node:20 nhưng lockfile/dashboard đã cần Node 22 (@types/node 22.x)
+# Fix Dokploy: (1) node:22-alpine thay node:20 — node:sqlite / pnpm 11
+#              (2) npm_config_dangerously_allow_all_builds — ERR_PNPM_IGNORED_BUILDS (sharp)
 
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat
@@ -8,6 +8,8 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+# pnpm 11: build scripts (sharp, …) bị chặn → ERR_PNPM_IGNORED_BUILDS
+ENV npm_config_dangerously_allow_all_builds=true
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile --network-timeout 600000; \
   elif [ -f package-lock.json ]; then npm ci; \
