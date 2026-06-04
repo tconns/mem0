@@ -6,6 +6,7 @@ Sau khi sync repo gốc mem0, chỉ cần giữ file này + 2 dòng hook trong m
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Dict, Optional
 
 
@@ -21,6 +22,14 @@ def _set_base_url(block: Dict[str, Any], url: Optional[str]) -> None:
         block["openai_base_url"] = url.rstrip("/")
 
 
+def _normalize_qdrant_url(url: str) -> str:
+    """Traefik TLS on :443; Qdrant container is plain HTTP on :6333 — drop :6333 for https URLs."""
+    url = url.rstrip("/")
+    if url.startswith("https://") and re.search(r":6333(?:/|$)", url):
+        url = re.sub(r":6333(?=/|$)", "", url)
+    return url
+
+
 def _apply_qdrant_vector_store(config: Dict[str, Any]) -> bool:
     qdrant_url = _env("QDRANT_URL")
     qdrant_host = _env("QDRANT_HOST")
@@ -31,7 +40,7 @@ def _apply_qdrant_vector_store(config: Dict[str, Any]) -> bool:
         if not qdrant_key:
             return False
         qdrant_config: Dict[str, Any] = {
-            "url": qdrant_url.rstrip("/"),
+            "url": _normalize_qdrant_url(qdrant_url),
             "api_key": qdrant_key,
         }
     elif qdrant_host and qdrant_port:
